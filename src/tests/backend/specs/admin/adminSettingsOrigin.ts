@@ -43,7 +43,7 @@ describe(__filename, function () {
     assert(setCookies.length > 0, 'admin authentication must issue a session cookie');
     const cookieHeader = setCookies.map((cookie: string) => cookie.split(';', 1)[0]).join('; ');
 
-    const socket = io(common.baseUrl + '/settings', {
+    const socket = io(`${common.baseUrl}/settings`, {
       forceNew: true,
       transports: ['websocket'],
       extraHeaders: {
