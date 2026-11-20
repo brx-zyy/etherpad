@@ -79,7 +79,7 @@ The workflow installed the project dependencies and Chromium, started Etherpad l
 - Attacker: `http://evil.etherpad.test:<port>`
 - Unrelated-site control: `http://attacker.invalid:<port>`
 
-The test used a host-only session cookie with `SameSite=Lax`. It verified:
+The test used a session cookie scoped to the target host with `SameSite=Lax`. It verified:
 
 1. The sibling-origin page connected to the target `/settings` namespace over WebSocket.
 2. The page received a unique marker placed in the test settings file.
