@@ -1,6 +1,7 @@
 'use strict';
 
 import http from 'node:http';
+import fs from 'node:fs';
 import {chromium} from '@playwright/test';
 import settings from '../../../../node/utils/Settings';
 
@@ -21,6 +22,8 @@ describe('admin settings browser CSWSH', function () {
   let browser: any;
   let attackerServer: http.Server;
   let attackerPort: number;
+  const socketIoClientScript = require.resolve('socket.io-client/dist/socket.io.js');
+  const socketIoClientCode = fs.readFileSync(socketIoClientScript);
   let backups: any;
 
   const targetHost = 'pad.etherpad.test';
@@ -54,7 +57,12 @@ describe('admin settings browser CSWSH', function () {
       ],
     });
 
-    attackerServer = http.createServer((_req, res) => {
+    attackerServer = http.createServer((req, res) => {
+      if (req.url === '/socket.io-client.js') {
+        res.writeHead(200, {'content-type': 'application/javascript'});
+        res.end(socketIoClientCode);
+        return;
+      }
       res.writeHead(200, {'content-type': 'text/html; charset=utf-8'});
       res.end('<!doctype html><html><body>controlled attacker origin</body></html>');
     });
@@ -108,7 +116,7 @@ describe('admin settings browser CSWSH', function () {
         const page = await context.newPage();
         try {
           await page.goto(`http://${attackerHost}:${attackerPort}/`);
-          await page.addScriptTag({url: `${targetOrigin}/socket.io/socket.io.js`});
+          await page.addScriptTag({url: `http://${attackerHost}:${attackerPort}/socket.io-client.js`});
           const result = await page.evaluate(({targetOrigin}) => new Promise((resolve) => {
             const socket = (window as any).io(`${targetOrigin}/settings`, {
               transports: ['websocket'],
