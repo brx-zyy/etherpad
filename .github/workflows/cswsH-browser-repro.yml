@@ -1,0 +1,55 @@
+name: Browser CSWSH reproduction
+
+on:
+  push:
+    branches: [security-repro-import-temp-leak]
+    paths:
+      - src/tests/backend/specs/admin/adminSettingsCswsHBrowser.ts
+      - .github/workflows/cswsH-browser-repro.yml
+      - src/node/**
+      - src/static/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-cswsh:
+    name: Chromium same-site sibling-origin CSWSH test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout security branch
+        uses: actions/checkout@v7
+        with:
+          ref: security-repro-import-temp-leak
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.1.1
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build admin UI
+        working-directory: admin
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Install Chromium
+        working-directory: src
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser-level CSWSH reproduction
+        working-directory: src
+        env:
+          RUN_CWSH_BROWSER_TEST: '1'
+        run: pnpm exec mocha --import=tsx --timeout 60000 --extension ts tests/backend/specs/admin/adminSettingsCswsHBrowser.ts
