@@ -144,11 +144,20 @@ describe('admin settings browser CSWSH', function () {
                 resolve(value);
               };
               socket.on('connect', () => socket.emit('load', ''));
-              socket.on('settings', (data) => finish({
-                disclosed: typeof data?.results === 'string',
-                resultLength: typeof data?.results === 'string' ? data.results.length : 0,
-              containsMarker: typeof data?.results === 'string' && data.results.includes('CSWSH_BROWSER_TEST_MARKER'),
-              }));
+              socket.on('settings', (data) => {
+                const readResult = {
+                  disclosed: typeof data?.results === 'string',
+                  resultLength: typeof data?.results === 'string' ? data.results.length : 0,
+                  containsMarker: typeof data?.results === 'string' && data.results.includes('CSWSH_BROWSER_TEST_MARKER'),
+                };
+                socket.emit('saveSettings', JSON.stringify({
+                  browserCswsHWriteMarker: 'CSWSH_BROWSER_WRITE_MARKER',
+                }));
+                socket.once('saveprogress', (status) => finish({
+                  ...readResult,
+                  writeAccepted: status === 'saved',
+                }));
+              });
               socket.on('admin_auth_error', () => finish({disclosed: false, adminAuthError: true}));
               socket.on('connect_error', (error) => finish({
                 disclosed: false,
@@ -169,6 +178,9 @@ describe('admin settings browser CSWSH', function () {
       const siblingResult = await runAttack(sameSiteAttackerHost, true);
       assert(siblingResult.resultLength > 0, 'the attacker page should receive non-empty settings data');
       assert.equal(siblingResult.containsMarker, true, 'the attacker page should receive the unique settings-file marker');
+      assert.equal(siblingResult.writeAccepted, true, 'the attacker page should be able to write settings');
+      assert(fs.readFileSync(settings.settingsFilename, 'utf8').includes('CSWSH_BROWSER_WRITE_MARKER'),
+          'the attacker-controlled settings content should be written to disk');
 
       const unrelatedResult = await runAttack(crossSiteAttackerHost, false);
       assert.equal(unrelatedResult.disclosed, false);
