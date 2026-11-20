@@ -117,32 +117,34 @@ describe('admin settings browser CSWSH', function () {
         try {
           await page.goto(`http://${attackerHost}:${attackerPort}/`);
           await page.addScriptTag({url: `http://${attackerHost}:${attackerPort}/socket.io-client.js`});
-          const result = await page.evaluate(({targetOrigin}) => new Promise((resolve) => {
-            const socket = (window as any).io(`${targetOrigin}/settings`, {
-              transports: ['websocket'],
-              upgrade: false,
-              timeout: 8000,
-              reconnection: false,
-            });
-            let finished = false;
-            const finish = (value: any) => {
-              if (finished) return;
-              finished = true;
-              socket.disconnect();
-              resolve(value);
-            };
-            socket.on('connect', () => socket.emit('load', ''));
-            socket.on('settings', (data: any) => finish({
-              disclosed: typeof data?.results === 'string',
-              resultLength: typeof data?.results === 'string' ? data.results.length : 0,
-            }));
-            socket.on('admin_auth_error', () => finish({disclosed: false, adminAuthError: true}));
-            socket.on('connect_error', (error: any) => finish({
-              disclosed: false,
-              connectError: String(error?.message || error),
-            }));
-            setTimeout(() => finish({disclosed: false, timedOut: true}), 10000);
-          }), {targetOrigin});
+          const result = await page.evaluate(`
+            ({targetOrigin}) => new Promise((resolve) => {
+              const socket = window.io(targetOrigin + '/settings', {
+                transports: ['websocket'],
+                upgrade: false,
+                timeout: 8000,
+                reconnection: false,
+              });
+              let finished = false;
+              const finish = (value) => {
+                if (finished) return;
+                finished = true;
+                socket.disconnect();
+                resolve(value);
+              };
+              socket.on('connect', () => socket.emit('load', ''));
+              socket.on('settings', (data) => finish({
+                disclosed: typeof data?.results === 'string',
+                resultLength: typeof data?.results === 'string' ? data.results.length : 0,
+              }));
+              socket.on('admin_auth_error', () => finish({disclosed: false, adminAuthError: true}));
+              socket.on('connect_error', (error) => finish({
+                disclosed: false,
+                connectError: String(error?.message || error),
+              }));
+              setTimeout(() => finish({disclosed: false, timedOut: true}), 10000);
+            })
+          `, {targetOrigin});
           assert.equal(result.disclosed, expectDisclosure,
               `unexpected browser result from ${attackerHost}: ${JSON.stringify(result)}`);
           return result;
