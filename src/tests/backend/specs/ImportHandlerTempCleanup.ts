@@ -14,17 +14,30 @@ describe(__filename, function () {
 
   let agent: any;
   let padId: string;
+  let originalAuthSettings: any;
 
   before(async function () {
     agent = await common.init();
   });
 
+  beforeEach(function () {
+    originalAuthSettings = {
+      requireAuthentication: settings.requireAuthentication,
+      requireSession: settings.requireSession,
+      editOnly: settings.editOnly,
+    };
+    settings.requireAuthentication = false;
+    settings.requireSession = false;
+    settings.editOnly = false;
+  });
+
   afterEach(async function () {
-    if (padId != null) {
+    Object.assign(settings, originalAuthSettings);
+    if (padId != null && await padManager.doesPadExist(padId)) {
       const pad = await padManager.getPad(padId);
       await pad.remove();
-      padId = undefined as any;
     }
+    padId = undefined as any;
   });
 
   const findNewFilesWithContent = async (before: Set<string>, marker: Buffer) => {
@@ -55,7 +68,6 @@ describe(__filename, function () {
   it('leaves a rejected PDF upload in os.tmpdir()', async function () {
     assert.equal(settings.soffice, null);
     padId = common.randomString(10);
-    await padManager.getPad(padId, '\n');
 
     const marker = Buffer.from('etherpad-import-temp-leak-proof-pdf');
     const before = new Set(await fs.readdir(os.tmpdir()));
@@ -69,7 +81,6 @@ describe(__filename, function () {
 
   it('leaves a successfully imported .etherpad upload in os.tmpdir()', async function () {
     padId = common.randomString(10);
-    await padManager.getPad(padId, '\n');
     const authorId = 'a.' + common.randomString(16);
     const pool = {numToAttrib: {}, nextNum: 0};
     const atext = {text: 'foo\n', attribs: '|1+4'};
