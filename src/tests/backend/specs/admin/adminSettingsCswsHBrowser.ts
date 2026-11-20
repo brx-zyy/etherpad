@@ -57,7 +57,7 @@ describe('admin settings browser CSWSH', function () {
       headless: true,
       args: [
         '--no-sandbox',
-        '--host-resolver-rules=MAP pad.etherpad.test [::1],MAP evil.etherpad.test [::1],MAP attacker.invalid 127.0.0.1',
+        '--host-resolver-rules=MAP pad.etherpad.test [::1],MAP evil.etherpad.test 127.0.0.1,MAP attacker.invalid 127.0.0.1',
       ],
     });
 
