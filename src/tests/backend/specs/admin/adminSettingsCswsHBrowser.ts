@@ -28,8 +28,8 @@ describe('admin settings browser CSWSH', function () {
   let settingsFileExisted = false;
   let settingsFileContents: Buffer | null = null;
 
-  const targetHost = 'localhost';
-  const sameSiteAttackerHost = 'localhost';
+  const targetHost = 'pad.etherpad.test';
+  const sameSiteAttackerHost = 'evil.etherpad.test';
   const crossSiteAttackerHost = 'attacker.invalid';
 
   before(async function () {
@@ -57,7 +57,7 @@ describe('admin settings browser CSWSH', function () {
       headless: true,
       args: [
         '--no-sandbox',
-        '--host-resolver-rules=MAP attacker.invalid 127.0.0.1',
+        '--host-resolver-rules=MAP pad.etherpad.test 127.0.0.1,MAP evil.etherpad.test 127.0.0.1,MAP attacker.invalid 127.0.0.1',
       ],
     });
 
@@ -91,7 +91,7 @@ describe('admin settings browser CSWSH', function () {
     }
   });
 
-  it('allows a same-site cross-origin page to read admin settings over WebSocket, while Lax blocks an unrelated site', async function () {
+  it('allows a same-site sibling subdomain to read admin settings over WebSocket, while Lax blocks an unrelated site', async function () {
     fs.writeFileSync(settings.settingsFilename, JSON.stringify({browserCswsHProofMarker: 'CSWSH_BROWSER_TEST_MARKER'}));
     const auth = await agent.get('/admin-auth/')
         .auth('admin', 'temporary-test-password')
