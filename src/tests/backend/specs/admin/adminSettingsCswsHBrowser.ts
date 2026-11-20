@@ -26,8 +26,8 @@ describe('admin settings browser CSWSH', function () {
   const socketIoClientCode = fs.readFileSync(socketIoClientScript);
   let backups: any;
 
-  const targetHost = 'pad.etherpad.test';
-  const sameSiteAttackerHost = 'evil.etherpad.test';
+  const targetHost = 'localhost';
+  const sameSiteAttackerHost = 'localhost';
   const crossSiteAttackerHost = 'attacker.invalid';
 
   before(async function () {
@@ -53,7 +53,7 @@ describe('admin settings browser CSWSH', function () {
       headless: true,
       args: [
         '--no-sandbox',
-        '--host-resolver-rules=MAP *.etherpad.test 127.0.0.1,MAP attacker.invalid 127.0.0.1',
+        '--host-resolver-rules=MAP attacker.invalid 127.0.0.1',
       ],
     });
 
