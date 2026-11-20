@@ -25,6 +25,8 @@ describe('admin settings browser CSWSH', function () {
   const socketIoClientScript = require.resolve('socket.io-client/dist/socket.io.js');
   const socketIoClientCode = fs.readFileSync(socketIoClientScript);
   let backups: any;
+  let settingsFileExisted = false;
+  let settingsFileContents: Buffer | null = null;
 
   const targetHost = 'localhost';
   const sameSiteAttackerHost = 'localhost';
@@ -32,6 +34,8 @@ describe('admin settings browser CSWSH', function () {
 
   before(async function () {
     agent = await common.init();
+    settingsFileExisted = fs.existsSync(settings.settingsFilename);
+    if (settingsFileExisted) settingsFileContents = fs.readFileSync(settings.settingsFilename);
     backups = {
       users: settings.users,
       requireAuthentication: settings.requireAuthentication,
@@ -73,6 +77,11 @@ describe('admin settings browser CSWSH', function () {
   after(async function () {
     if (browser) await browser.close();
     if (attackerServer) await new Promise<void>((resolve) => attackerServer.close(() => resolve()));
+    if (settingsFileExisted && settingsFileContents != null) {
+      fs.writeFileSync(settings.settingsFilename, settingsFileContents);
+    } else if (fs.existsSync(settings.settingsFilename)) {
+      fs.unlinkSync(settings.settingsFilename);
+    }
     if (backups) {
       settings.users = backups.users;
       settings.requireAuthentication = backups.requireAuthentication;
@@ -82,7 +91,8 @@ describe('admin settings browser CSWSH', function () {
     }
   });
 
-  it('allows a same-site sibling origin to read admin settings over WebSocket, while Lax blocks an unrelated site', async function () {
+  it('allows a same-site cross-origin page to read admin settings over WebSocket, while Lax blocks an unrelated site', async function () {
+    fs.writeFileSync(settings.settingsFilename, JSON.stringify({browserCswsHProofMarker: 'CSWSH_BROWSER_TEST_MARKER'}));
     const auth = await agent.get('/admin-auth/')
         .auth('admin', 'temporary-test-password')
         .expect(200);
@@ -137,6 +147,7 @@ describe('admin settings browser CSWSH', function () {
               socket.on('settings', (data) => finish({
                 disclosed: typeof data?.results === 'string',
                 resultLength: typeof data?.results === 'string' ? data.results.length : 0,
+              containsMarker: typeof data?.results === 'string' && data.results.includes('CSWSH_BROWSER_TEST_MARKER'),
               }));
               socket.on('admin_auth_error', () => finish({disclosed: false, adminAuthError: true}));
               socket.on('connect_error', (error) => finish({
@@ -157,6 +168,7 @@ describe('admin settings browser CSWSH', function () {
 
       const siblingResult = await runAttack(sameSiteAttackerHost, true);
       assert(siblingResult.resultLength > 0, 'the attacker page should receive non-empty settings data');
+      assert.equal(siblingResult.containsMarker, true, 'the attacker page should receive the unique settings-file marker');
 
       const unrelatedResult = await runAttack(crossSiteAttackerHost, false);
       assert.equal(unrelatedResult.disclosed, false);
