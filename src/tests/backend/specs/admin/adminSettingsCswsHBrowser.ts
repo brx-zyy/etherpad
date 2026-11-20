@@ -117,8 +117,9 @@ describe('admin settings browser CSWSH', function () {
         try {
           await page.goto(`http://${attackerHost}:${attackerPort}/`);
           await page.addScriptTag({url: `http://${attackerHost}:${attackerPort}/socket.io-client.js`});
-          const result = await page.evaluate(`
-            ({targetOrigin}) => new Promise((resolve) => {
+          const browserScript = `
+            new Promise((resolve) => {
+              const targetOrigin = ${JSON.stringify(targetOrigin)};
               const socket = window.io(targetOrigin + '/settings', {
                 transports: ['websocket'],
                 upgrade: false,
@@ -144,7 +145,8 @@ describe('admin settings browser CSWSH', function () {
               }));
               setTimeout(() => finish({disclosed: false, timedOut: true}), 10000);
             })
-          `, {targetOrigin});
+          `;
+          const result = await page.evaluate(browserScript);
           assert.equal(result.disclosed, expectDisclosure,
               `unexpected browser result from ${attackerHost}: ${JSON.stringify(result)}`);
           return result;
