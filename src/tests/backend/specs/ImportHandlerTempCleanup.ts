@@ -45,7 +45,7 @@ describe(__filename, function () {
     const newPaths = after.filter((name) => !before.has(name));
     const matching = [];
     for (const name of newPaths) {
-      const fullPath = `${os.tmpdir()}/${name}`;
+      const fullPath = require('node:path').join(os.tmpdir(), name);
       try {
         if ((await fs.readFile(fullPath)).equals(marker)) matching.push(fullPath);
       } catch (err: any) {
