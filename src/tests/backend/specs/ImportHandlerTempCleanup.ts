@@ -13,16 +13,17 @@ describe(__filename, function () {
   this.timeout(30000);
 
   let agent: any;
-  let pad: any;
+  let padId: string;
 
   before(async function () {
     agent = await common.init();
   });
 
   afterEach(async function () {
-    if (pad != null) {
+    if (padId != null) {
+      const pad = await padManager.getPad(padId);
       await pad.remove();
-      pad = null;
+      padId = undefined as any;
     }
   });
 
